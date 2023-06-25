@@ -72,9 +72,13 @@ reg Leverage CashFlow Tangibility Size Q
 * Question 4
 
 
+* We need to install this package in STATA
+* ssc install reghdfe
 
 
 
+
+reghdfe Leverage CashFlow Tangibility Size Q , absorb(year SICNum id)
 
 
 
