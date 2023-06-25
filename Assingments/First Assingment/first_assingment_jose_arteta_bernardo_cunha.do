@@ -34,6 +34,7 @@ replace SICNum = real(regexs(0)) if regexm(SICCodes, "(\d+)")
  destring TotalCurrDebt, replace force
  destring LongTermDebt, replace force
  destring EBIT, replace force
+ destring IncomeBeforeEI, replace force
 
 
 * Creating Variables for the OLS
@@ -59,9 +60,13 @@ gen Q = (TotalAssets + MarketCap - BookValueShare - DefTaxAssetsCurr - DefTaxAss
 
 
 * Question 1
+* summary statatiscs of the dataset
 sum 
 
 
+
+* Question 2 -  Calculate pairwise correlation
+pwcorr
 
 
 
@@ -74,10 +79,6 @@ reg Leverage CashFlow Tangibility Size Q
 
 * We need to install this package in STATA
 * ssc install reghdfe
-
-
-
-
 reghdfe Leverage CashFlow Tangibility Size Q , absorb(year SICNum id)
 
 
