@@ -1,0 +1,14 @@
+library(tidyverse)
+library(haven)
+
+
+
+data <- read_dta("MergedDatabaseAssignment1.dta")
+
+
+a <- data[4579,]
+b <- data[4580,] 
+
+
+
+
