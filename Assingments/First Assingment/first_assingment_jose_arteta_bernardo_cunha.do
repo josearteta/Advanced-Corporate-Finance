@@ -142,7 +142,7 @@ nomtitle collabels(none) nonote
 
 * Question 6
 reghdfe Leverage L.CashFlow L.Tangibility L.Size L.Q , absorb(year SICNum id)
-eststo: est store model5 using lagged_ols.tex, replace
-esttab model5
+eststo: est store model5 
+esttab model5 using lagged_ols.tex, replace
 
 
