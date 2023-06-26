@@ -84,7 +84,7 @@ esttab using summary_stats.tex, replace ///
 
 * Question 2 -  Calculate pairwise correlation
 * Pairwise correlations
-pwcorr Leverage CashFlow Tangibility Size Q, matrix(corrMatrix)
+pwcorr Leverage CashFlow Tangibility Size Q
 
 * Exporting to TeX the pairwise correlations
 estpost corr Leverage CashFlow Tangibility Size Q, matrix
@@ -146,3 +146,15 @@ eststo: est store model5
 esttab model5 using lagged_ols.tex, replace
 
 
+
+* Question 7
+* Generate the initial  leverage for each firm
+sort id year
+by id: gen leverage_initial = Leverage[1]
+
+reghdfe Leverage L.CashFlow L.Tangibility L.Size L.Q leverage_initial if year > 1980, absorb(year)
+
+eststo: est store model5 
+esttab model5 using lag_leverage.tex, replace  ///
+varlabels(_cons "Constant") ///
+nomtitle collabels(none) nonote
