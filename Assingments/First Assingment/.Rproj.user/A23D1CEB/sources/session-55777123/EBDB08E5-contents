@@ -1,0 +1,25 @@
+library(tidyverse)
+library(haven)
+
+
+
+data <- read_dta("MergedDatabaseAssignment1.dta")
+
+
+a <- data[4579,]
+b <- data[4580,] 
+
+
+sec <- runif(100, min = 0, max = 333)
+
+minutes <- sec / (60)
+
+minutes <- minutes + 10    
+
+
+
+index <- runif(n=30, min = 0, max = 100)
+
+
+
+minutes[index]
