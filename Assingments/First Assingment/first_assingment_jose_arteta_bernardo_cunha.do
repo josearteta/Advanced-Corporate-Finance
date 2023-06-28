@@ -27,27 +27,26 @@ drop if _n == 4580
 gen id = _n
 
 
-* Convert data form wide to long format
+// Convert data form wide to long format
 reshape long TotalCurLiabilities TotalLiabilities TotalAssets NetIncome DeprecAmort NetPropPlantEquip BookValueShare DefTaxAssetsCurr DefTaxAssetsLT MarketCap TotalCurrDebt LongTermDebt IncomeBeforeEI EBIT, i(id CompanyName ExchangeTicker CompanyType GeographicLocations SICCodes) j(year)
 
 
 
 
-* Cleaning steps according the Appendix
-
+// Cleaning steps according the Appendix
 * Extract the SIC code and creates a numerical variable of it
 gen SICNum = .
 replace SICNum = real(regexs(0)) if regexm(SICCodes, "(\d+)")
 drop if SICNum < 2000 | SICNum > 4000
 
 
-* Convert some variables from string to double
+// Convert some variables from string to double
  destring TotalCurrDebt, replace force
  destring LongTermDebt, replace force
  destring EBIT, replace force
  destring IncomeBeforeEI, replace force
 
-* Declaring the dataset as a panel 
+*Declaring the dataset as a panel 
 tsset id year
 
  /* note that we have decided to drop negative values (<=0) of TotalAssets since we are 
@@ -55,8 +54,8 @@ tsset id year
  */
  drop if TotalAssets <= 0
  
-* Creating Variables for the OLS accroding to what was done in the Email
-* Creating Leverage variable
+// Creating Variables for the OLS accroding to what was done in the Email
+// Creating Leverage variable
 gen Leverage = (TotalCurrDebt + LongTermDebt)/TotalAssets
 
 * Creating cash flow
@@ -79,12 +78,21 @@ bysort id: gen byte complete = _N == `T'
 drop if complete != 1
 
 
+
+* Additional step - define labels of the variables for the estimation and Latex table
+label variable CashFlow "Cash Flow"
+label variable Tangibility "Tangibility"
+label variable Size "Size"
+label variable Q "Q"
+
+
+
 /* 
 Question 1 -  Summary Statistics
 */
 
-* summary statatiscs of the dataset
-sum Leverage CashFlow Tangibility Size Q 
+// summary statatiscs of the dataset
+sum Leverage CashFlow Tangibility Size Q , d
 
 * In order to export the results it is important to run the 
 * ssc install estout
@@ -92,6 +100,14 @@ estpost sum Leverage CashFlow Tangibility Size Q
 esttab using summary_stats.tex, replace ///
    cells("sum(fmt(%6.0fc)) mean(fmt(%6.2fc)) sd(fmt(%6.2fc)) min max count") nonumber ///
    nomtitle nonote noobs label collabels("Sum" "Mean" "SD" "Min" "Max" "N")
+   
+   
+// detailed summary statistics by country
+bysort GeographicLocations: sum Leverage CashFlow Tangibility Size Q, d
+
+// detailed summary statistics by industry
+bysort SICCodes: sum Leverage CashFlow Tangibility Size Q, d 
+
 
  * Export histograms of each variable
  foreach var in Leverage CashFlow Tangibility Size Q {
@@ -121,7 +137,7 @@ foreach var in CashFlow Tangibility Size Q {
 Question 3 - OLS regression
 */
 
-* OLS regression 
+// OLS regression 
 reg Leverage CashFlow Tangibility Size Q 
 eststo: est store model1 // exporting tex
 esttab model1 using ols_reg.tex, replace // exporting tex
@@ -133,6 +149,7 @@ Question 4 - Fixed Effect regression
 * We need to install this package in STATA
 * ssc install reghdfe
 
+// Regression with year SIC and id fixed effects
 reghdfe Leverage CashFlow Tangibility Size Q , absorb(year SICNum id)
 eststo: est store model2 // exporting tex
 esttab model2 using fe_ols.tex, replace // exporting tex
@@ -145,10 +162,18 @@ Question 5 - Windsorized regression
 * This package is required
 *ssc install winsor2
  
-* Windsorized regression p5th and p95th
+// Windsorized regression p5th and p95th
 winsor2 Leverage CashFlow Tangibility Size Q,  cuts(5 95) // winsorize at 5th and 95th percentile
 reg Leverage_w CashFlow_w Tangibility_w Size_w Q_w, robust
 eststo: est store model3
+
+* Add labels to the winsorized variables
+label variable Leverage_w "Leverage"
+label variable CashFlow_w "Cash Flow"
+label variable Tangibility_w "Tangibility"
+label variable Size_w "Size"
+label variable Q_w "Q"
+
 
 eststo model3 // Renaming variables to make the output better
 estadd local CashFlow_w "CashFlow"
@@ -157,10 +182,17 @@ estadd local Size_w "Size"
 estadd local Q_w "Q"
 
 
-* Trimmed regression p5th and p95th
+// Trimmed regression p5th and p95th
 winsor2 Leverage CashFlow Tangibility Size Q,  cuts(5 95) trim // trimmed at 5th and 95th percentile
 reg Leverage_tr CashFlow_tr Tangibility_tr Size_tr Q_tr, robust
 eststo: est store model4 
+
+* Add labels to the trimmed variables
+label variable Leverage_tr "Leverage"
+label variable CashFlow_tr "Cash Flow"
+label variable Tangibility_tr "Tangibility"
+label variable Size_tr "Size"
+label variable Q_tr "Q"
 
 eststo model4 // Renaming variables to make the output better
 estadd local CashFlow_tr "CashFlow"
@@ -177,6 +209,9 @@ nomtitle collabels(none) nonote
 Question 6
 */
 
+* sort variable
+sort id year
+
 * Lagged regression
 reghdfe Leverage L.CashFlow L.Tangibility L.Size L.Q , absorb(year SICNum id)
 eststo: est store model5 
@@ -192,10 +227,28 @@ sort id year
 by id: gen leverage_initial = Leverage[1]
 
 * Regression with lagged variables and initial leverage
-reghdfe Leverage L.CashFlow L.Tangibility L.Size L.Q leverage_initial if year > 1980, absorb(year)
+reghdfe Leverage L.CashFlow L.Tangibility L.Size L.Q leverage_initial if year > 1980, absorb(year SICNum)
 
 * Exporting TeX
-eststo: est store model5 
+eststo: est store model6
 esttab model5 using lag_leverage.tex, replace  ///
 varlabels(_cons "Constant") ///
 nomtitle collabels(none) nonote
+
+
+
+
+/*
+Additional step - Reporting every regression in the same table
+*/
+
+esttab model1 model2 model3 model4 model5 model6 using complete_table.tex, replace  ///
+se mlabels("OLS" "FE-OLS" "Windsorized" "Trimmed" "Lagged " "Lagged with Leverage") label ///
+nomtitle collabels(none) nonote
+
+
+
+
+
+
+
