@@ -10,7 +10,7 @@ a <- data[4579,]
 b <- data[4580,] 
 
 
-sec <- runif(100, min = 0, max = 333)
+sec <- runif(100, min = -75, max = 333)
 
 minutes <- sec / (60)
 
@@ -18,7 +18,12 @@ minutes <- minutes + 10
 
 
 
-index <- runif(n=30, min = 0, max = 100)
+index <- runif(n=50, min = 0, max = 100)
+
+
+
+
+
 
 
 
