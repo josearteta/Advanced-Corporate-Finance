@@ -68,34 +68,36 @@ hist count
 
 
 
-* Regression Analysis
+/***************************
+	Regression Analysis
+*/**************************
 
 // OLS regression 
 reg Investment Q  CashFlow i.id i.year, robust
 eststo: est store model1 // exporting tex
-esttab model1 using my_regression_output.tex, keep(_cons Q Investment) replace
+esttab model1 using my_regression_output.tex, keep(_cons Q CashFlow) replace
 
 // OLS regression - Winsorization
-winsor2 Investment Q  CashFlow,  cuts (5 95)
-reg Investment_w Q_w CashFlow_w i.id i.year, robust
+winsor2 Investment Q  CashFlow Leverage Tangibility Z,  cuts (5 95)
+reg Investment_w Q_w CashFlow_w i.id i.year, robust 
 eststo: est store model2 // exporting tex
 
 // OLS regression - Trim
-winsor2 Investment Q  CashFlow,  cuts (5 95) trim
+winsor2 Investment Q  CashFlow Leverage Tangibility Z,  cuts (5 95) trim
 reg Investment_tr Q_tr CashFlow_tr i.id i.year, robust
 eststo: est store model3 // exporting tex
 
 // Fixed Effects regression - by year and firm
-reghdfe Investment Q  CashFlow , absorb(id year)
+quietly: reghdfe Investment Q  CashFlow , absorb(id year)
 eststo: est store model4 // exporting tex
 esttab model4 using fe_ols.tex, replace // exporting tex
 
 // Fixed Effects regression - Winsorization
-reghdfe Investment_w Q_w CashFlow_w , absorb(id year)
+quietly: reghdfe Investment_w Q_w CashFlow_w , absorb(id year)
 eststo: est store model5 // exporting tex
 
 // OFixed Effects regression - Trim
-reghdfe Investment_tr Q_tr CashFlow_tr , absorb(id year)
+quietly: reghdfe Investment_tr Q_tr CashFlow_tr , absorb(id year)
 eststo: est store model6 // exporting tex
 
 
@@ -130,17 +132,50 @@ ttest Z, by(insample)
 * Creating a variable to represent numerically each industry
 encode SICCodes, generate(SICCodes_num)
 
-* Nearest neighbor matching. Match with just 1 
-nnmatch Investment insample Size Leverage Tangibility Z, exact(SICCodes_num) tc(att) m(1) keep(filename) replace
+* Nearest neighbor matching. Match with just 1 - no winsor or trim
+nnmatch Investment insample Size Leverage Tangibility Z, exact(SICCodes_num) tc(att) m(1) keep(match_1) replace
+joinby id using match_1,unmatched(master)
+reshape wide varlist, i(id) j(date)
+swapval cashflow_w0 cashflow_w1
+reshape long varlist, i(id) j(date)
 
- 
- 
- * Nearest neighbor matching. Match with just 1 
-nnmatch Investment insample Size Leverage Tangibility Z, exact(SICCodes_num) tc(att) m(4) keep(filename) replace
 
- 
- 
- 
+
+
+
+
+* Nearest neighbor matching. Match with just 1 - winsor 
+nnmatch Investment_w insample Size_w Leverage_w Tangibility_w Z_w, exact(SICCodes_num) tc(att) m(1) keep(match_1_wr) replace  
+  
+* Nearest neighbor matching. Match with just 1 - no winsor or trim
+nnmatch Investment_tr insample Size_tr Leverage_tr Tangibility_tr Z_tr, exact(SICCodes_num) tc(att) m(1) keep(match_1_tr) replace
+  
+* Nearest neighbor matching. Match with 4 and Mahalanobis metric
+nnmatch Investment insample Size Leverage Tangibility Z, exact(SICCodes_num) tc(att) m(4) keep(match_4)  metric(maha) replace
+
+ * Nearest neighbor matching. Match with just 1 - winsor
+nnmatch Investment_wr insample Size_wr Leverage_wr Tangibility_wr Z_wr, exact(SICCodes_num) tc(att) m(1) keep(match_4_wr)  metric(maha) replace  
+  
+* Nearest neighbor matching. Match with just 1 - no winsor or trim
+nnmatch Investment)tr insample Size_tr Leverage_tr Tangibility_tr Z_tr, exact(SICCodes_num) tc(att) m(1) keep(match_4_tr)  metric(maha) replace
+  
+
+
+
+
+
+* Reshape
+
+
+reshape long Investment Size Leverage Tangibility Z SICCodes_num, i(id) j(insample)
+joinby varlist using filename, unmatched(master)
+set matsize 11000
+
+
+
+
+
+
  
  
  
